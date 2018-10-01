@@ -1,0 +1,1266 @@
+extends jinja
+
+global !p
+from search_list import selector, expand
+from python_snippets import get_args, format_arg
+
+VALID_REQUISITE_TYPES = (
+  'require',
+  'require_in',
+  'require_any',
+  'watch',
+  'watch_in',
+  'watch_any',
+  'prereq',
+  'onfail',
+  'onfail_in',
+  'onfail_any',
+  'onchanges_in',
+  'onchanges_any'
+)
+
+
+def cim(t, snip, pos, match):
+    """
+    writes a comment if the value matches, otherwise nothing
+    """
+    snip.rv = ""
+    args = get_args(t[pos])
+    if not args:
+      if type(snip)==str:
+        snip.rv += snip
+      return
+    if args[0].arg == str(match):
+        snip.rv = '#'
+
+def write_requisite_lines(t, snip, pos, type_pos=1):
+    """
+    Writes a list of pillar types to check values for
+
+    :param t: The values of the placeholders
+    :param snip: UltiSnips.TextObjects.SnippetUtil object instance
+    """
+    snip.rv = ""
+
+    args = get_args(t[pos])
+    type_args = get_args(t[type_pos])
+    if not all((type_args, args)) and type(snip)==str:
+        snip.rv += snip
+        return
+
+    snip += '- {}:'.format(type_args[0])
+
+    snip >> 1
+    for arg in args:
+        snip += '- {}'.format(arg)
+
+def write_pillar_keys_check_existence(t, snip, pos):
+    """
+    Writes a list of pillar keys to check the existence of
+
+    :param t: The values of the placeholders
+    :param snip: UltiSnips.TextObjects.SnippetUtil object instance
+    """
+    snip.rv = ""
+    snip >> 2
+
+    args = get_args(t[pos])
+    if not args and type(snip)==str:
+        snip.rv += snip
+        return
+
+    # snip.rv += '\n' + snip.mkline('', indent='')
+
+    snip += '- present:'
+
+    snip >> 1
+    for arg in args:
+        snip += '- {}'.format(arg)
+
+VALID_PILLAR_TYPES = (u'integer', u'string', u'boolean', u'listing', u'dictionary')
+def write_pillar_types_to_check(t, snip, pos):
+    """
+    Writes a list of pillar types to check values for
+
+    :param t: The values of the placeholders
+    :param snip: UltiSnips.TextObjects.SnippetUtil object instance
+    """
+    snip.rv = ""
+    snip >> 2
+
+    args = get_args(t[pos])
+    if not args and type(snip)==str:
+        snip.rv += snip
+        return
+
+    for arg in filter(lambda a: a.arg in VALID_PILLAR_TYPES, args):
+        snip += '- {}:'.format(arg)
+        snip >> 1
+        snip += '- some_key'
+        snip << 1
+
+endglobal
+
+
+##########################
+#  General State things  #
+##########################
+
+
+snippet s.m "salt['mod.something'](args,kwargs)"
+salt['$1'](${2:args}, ${3:kwargs})
+endsnippet
+
+post_jump "expand(snip)"
+snippet s. "salt['mod.something'](args, kwargs)"
+s.m$1
+endsnippet
+
+snippet st.n "create a state id"
+${1:id_name}:
+  $2:
+    - $3
+endsnippet
+
+snippet st.com "jinja comment"
+{# 
+${1:${VISUAL:comment}}
+#}
+endsnippet
+
+post_jump "expand(snip)"
+snippet st. "new state (id)"
+st.n$1
+endsnippet
+
+snippet imp "import state variables"
+{% from '${1:lib.sls}' import ${2:value-to-import} ${3:with context}%}
+endsnippet
+
+snippet ext "extend another state file, typically using blocks"
+{% extends "${1:statefile/to/extend.sls" %}
+endsnippet
+
+snippet eq "if _ is equalto(__) "
+{% if ${1:value1} is equalto(${2:value2}) %}
+${3}
+{% endif %}
+endsnippet
+
+snippet mat "if _ is match(regex) "
+{% if ${1:value1} is match(${2:value2}) %}
+${3}
+{% endif %}
+endsnippet
+
+snippet debug "debug show all variables present"
+Context is: {{ show_full_context()|yaml(False) }}
+endsnippet
+
+snippet log "log to the logger"
+{%- do salt.log.${1:error|debug|info}('${2:output here}') -%}
+endsnippet
+
+##########################################################################
+#  Requisites                                                            #
+#  https://docs.saltstack.com/en/latest/ref/states/requisites.html       #
+##########################################################################
+
+snippet req.r "require"
+`!p snip.unshift(10); snip.shift(2)`# valid requisite types:
+# `!p snip.rv = ','.join(VALID_REQUISITE_TYPES)`
+# requisite_type: ${1:require}
+# comma separated list of states to $1
+# states: ${2:vim.setup,nginx,presence}`!p write_requisite_lines(t, snip, 2, 1)`
+$0
+endsnippet
+
+
+###################
+#  Pillar things  #
+###################
+
+snippet p.g "salt['pillar.get'](key, default)"
+salt['pillar.get']('${2:key}'${3:, default})
+endsnippet
+
+post_jump "expand(snip)"
+snippet p. "salt['pillar.get'](key, default)"
+p.g$1
+endsnippet
+
+####################
+#  Set var things  #
+####################
+
+snippet sv.p "set var to a pillar"
+{% set ${1:varname} = salt['pillar.get']('${2:key}'${3:, default}) %}
+endsnippet
+
+post_jump "expand(snip)"
+snippet sv. "set variable to pillar value"
+sv.p$1
+endsnippet
+
+snippet sv.g "set var to a grains value"
+{% set ${1:varname} = salt['grains.get']('${2:key}'${3:, default}) %}
+endsnippet
+
+post_jump "expand(snip)"
+snippet sv. "set variable to grains value"
+sv.g$1
+endsnippet
+
+snippet sv.s "set variable"
+{% set ${1:varname} = $2 %}
+endsnippet
+
+post_jump "expand(snip)"
+snippet sv. "set variable"
+sv.s$1
+endsnippet
+
+
+###############################################################################
+#                                 Test Things                                 #
+###############################################################################
+
+
+snippet t.cts "test.configurable_test_state"
+test_${1:id_name}:
+  test.configurable_test_state:
+    - name: ${2:name of the test}
+	- changes: $3`!p snip.rv=selector(t[3], 'True/False/Random')`
+	- result: $4`!p snip.rv=selector(t[4], 'True/False/Random')`
+	- comment: ${5:comment...}
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet t. "test.configurable_test_state"
+t.cts$1
+endsnippet
+
+snippet t.cp "test.check_pillar" b
+test_${1:test-name}_check_pillar:
+# keys to check existence(comma-separated): ${2:list,of,keys}
+# value types to check for(comma-separated): ${3:integer,string,boolean,listing,dictionary}
+  test.check_pillar:`!p write_pillar_keys_check_existence(t, snip, 2)`
+`!p write_pillar_types_to_check(t, snip, 3) `
+$0
+endsnippet
+
+post_jump "expand(snip)"
+snippet t. "test.check_pillar"
+t.cp$1
+endsnippet
+
+
+# Add snippets for
+# - defining yaml structure
+# - doing import_yaml
+# - doing import_json
+# - doing load_yaml
+# - doing load_json
+
+######################
+# states.file
+######################
+
+snippet f.m "file.managed"
+# check existence of and contents of file
+file_${1:id_name}_managed:
+	file.managed:
+      - name: ${2:filename}
+      - $3`!p snip.rv=selector(t[2], 'source/content_pillar/contents')`: ${4:path-or-contents}
+		- makedirs: $5`!p snip.rv=selector(t[5], 'source/content_pillar/contents')`
+endsnippet
+
+post_jump "expand(snip)"
+snippet f. "file.managed"
+f.m$1
+endsnippet
+
+snippet f.d "file.directory"
+# check and creates the directory
+file_${1:id_name}_directory_exists:
+	file.directory:
+      - name: ${2:filename}
+		- makedirs: $3`!p snip.rv=selector(t[3], 'source/content_pillar/contents')`
+endsnippet
+
+post_jump "expand(snip)"
+snippet f. "file.directory"
+f.d$1
+endsnippet
+
+snippet f.e "file.exists"
+# simply checks to see if the file exists, it is not created
+file_${1:id_name}_exists:
+	file.exists:
+      - name: ${2:filename}
+endsnippet
+
+post_jump "expand(snip)"
+snippet f. "file.exists"
+f.e$1
+endsnippet
+
+
+snippet f.rec "file.recurse"
+# Recurse through a subdirectory on the master and copy said subdirectory over
+# to the specified path
+file_${1:id_name}_recurse_check:
+	file.recurse:
+      - name: ${2:filename}
+		- source: ${3:source_directory}
+		# Make sure that only files that are set up by salt and required by this
+		# function are kept. If this option is set then everything in this
+		# directory will be deleted unless it is required.
+    `!p cim(t, snip, 4, 'true|false')`- clean: ${4:true|false}
+		# If this setting is applied, the named templating engine will be used to
+		# render the downloaded file. 
+		# - template: ${5:jinja}
+endsnippet
+
+post_jump "expand(snip)"
+snippet f. "file.recurse"
+f.rec$1
+endsnippet
+
+
+snippet f.ren "file.rename"
+# rename file on system if it exists
+file_${1:id_name}_rename:
+	file.absent:
+      - name: ${2:file_or_directory_path}
+		- source: ${3:/location/of/original/file}
+		# specify force as true to override existing file
+    `!p cim(t, snip, 4, 'true|false')`- force: ${4:true|false}
+    `!p cim(t, snip, 5, 'true|false')`- makedirs: ${5:true|false}
+endsnippet
+
+post_jump "expand(snip)"
+snippet f. "file.rename"
+f.ren$1
+endsnippet
+
+snippet f.ab "file.absent"
+# works to make sure a file (or directory) is absent on the filesystem
+file_${1:id_name}_absent:
+	file.absent:
+      - name: ${2:file_or_directory_path}
+endsnippet
+
+post_jump "expand(snip)"
+snippet f. "file.absent"
+f.ab$1
+endsnippet
+
+snippet f.a "file.append"
+# ensure that some text appears at the end of a file
+file_${1:id_name}_append:
+	file.append:
+      - name: ${2:file_or_directory_path}
+		# text can be multiple lines
+		#- text: 
+      #  - text to append
+		#  - can be lines
+		- text: ${3:| 
+          Thou hadst better eat salt with the Philosophers of Greece,
+          than sugar with the Courtiers of Italy.
+          - Benjamin Franklin}
+		- makedirs: ${4:true|false}
+		- source: ${5:source filepath to append}
+    - template: $6`!p snip.rv=selector(t[6], 'jinja')`
+endsnippet
+
+post_jump "expand(snip)"
+snippet f. "file.append"
+f.a$1
+endsnippet
+
+snippet f.d "file.decode"
+# Decode and encoded file and write it to disk
+# encoded_data or contents_pillar must be set
+file_${1:id_name}_decode:
+	file.decode:
+      - name: ${2:file_path}
+      - $3`!p snip.rv=selector(t[3], 'encoded_data/contents_pillar')`: ${4:mypillar:thefile or |
+          Z2V0IHNhbHRlZAo=}
+endsnippet
+
+post_jump "expand(snip)"
+snippet f. "file.decode"
+f.d$1
+endsnippet
+
+snippet f.c "file.comment"
+# Comment out specified lines in a file
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.file.html#salt.states.file.comment
+# Always include the leading ^ character in the regex pattern
+file_${1:id_name}_comment:
+	file.comment:
+      - name: ${2:file_path}
+		- regex: ${3:regex_to_file}
+		- char: ${4:#}
+endsnippet
+
+post_jump "expand(snip)"
+snippet f. "file.comment"
+f.c$1
+endsnippet
+
+######################
+# states.cmd 
+######################
+
+snippet cmd.r "cmd.run"
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.cmd.html#salt.states.cmd.run
+# Run a command if certain circumstances are met. Use cmd.wait if you want to
+# use the watch requisite
+cmd_${1:id_name}_run:
+	cmd.run:
+    - name: ${2:file_path}
+    # - onlyif: 'command to check return code and only run if zero exit status'
+    # - unless: 'command to check, only run if non-zero exit status'
+    # - runas: 'which user to run this command as, defaults to root'
+    # - cwd: 'working directory for command'
+    # list of environmental variables to set
+    # - env: 
+    #   - BATCH: 'yes'
+    # Only run if the file or files specified by creates do not exist.
+    # creates: 
+    #   - list
+    #   - of files
+$0
+endsnippet
+
+post_jump "expand(snip)"
+snippet cmd. "cmd.run"
+cmd.r$1
+endsnippet
+
+snippet cmd.s "cmd.script"
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.cmd.html#salt.states.cmd.script
+# download a script and execute it with specified arguments
+cmd_${1:id_name}_script-run:
+	cmd.script:
+    - source: ${2:salt://spam/eggs.sh}
+    # Name overrides source if source is not given
+    - name: ${3:salt://spam/eggs.sh}
+    # - template: jinja 
+    # - unless: 'command to check, only run if non-zero exit status'
+    # - runas: 'which user to run this command as, defaults to root'
+    # - cwd: 'working directory for command'
+    # list of environmental variables to set
+    # - env: 
+    #   - BATCH: 'yes'
+    # Only run if the files specified by `creates` do not exist.
+    # creates: 
+    #   - list
+    #   - of files
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet cmd. "cmd.script"
+cmd.s$1
+endsnippet
+
+######################
+# states.cloud 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.cloud.html#
+######################
+
+snippet cl.a "cloud.absent"
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.cloud.html#salt.states.cloud.absent
+# Ensure that no instances with the specified names exist.  
+# 
+# CAUTION: This is a # destructive state, which will search all configured
+# cloud providers for the # named instance, and destroy it.
+cloud_${1:id_name}_absent:
+  cloud.absent:
+    - name: ${2:instance_name}
+    # Run only if `onlyif` states succeeded
+    # - onlyif:
+    #   - state id
+    # Run unless `unless` states succeeded
+    # - unless:
+    #   - state id
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet cl. "cloud.absent"
+cl.a$1
+endsnippet
+
+snippet cl.pr "cloud.present"
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.cloud.html#salt.states.cloud.present
+# Ensure that an instance with the specified name exists, does not take a cloud
+# profile name. Rather, it takes profile arguments (opts) that would normally be
+# configured as part of the state
+
+cloud_${1:id_name}_present:
+  cloud.present:
+    - name: ${2:instance_name}
+    - cloud_provider: ${3:cloud_provider_name}
+    - opts:
+      - ${4: any extra opts to be used}
+    # Run only if `onlyif` states succeeded
+    # - onlyif:
+    #   - state id
+    # Run unless `unless` states succeeded
+    # - unless:
+    #   - state id
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet cl. "cloud.present"
+cl.pr$1
+endsnippet
+
+snippet cl.p "cloud.profile"
+#
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.cloud.html#salt.states.cloud.profile
+# Create a single instance on a cloud provider, using a salt-cloud profile.
+#
+# Note that while profiles used this function do take any configuration
+# argument that would normally be used to create an instance using a profile,
+# this state will not verify the state of any of those arguments on an existing
+# instance. Stateful properties of an instance should be configured using their
+# own individual state (i.e., cloud.tagged, cloud.untagged, etc).
+
+cloud_${1:id_name}_profile:
+  cloud.profile:
+    - name: ${2:instance_name}
+    - profile: ${3:cloud_profile_name}
+    - kwargs:
+        ${4: any profile override or addition }
+    # - opts:
+    #   - ${5: any extra opts to be used}
+    # Run only if `onlyif` states succeeded
+    # - onlyif:
+    #   - state id
+    # Run unless `unless` states succeeded
+    # - unless:
+    #   - state id
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet cl. "cloud.profile"
+cl.p$1
+endsnippet
+
+######################
+# states.event 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.event.html
+######################
+
+snippet ev.s "event.send"
+event_${1:id_name}_send:
+  event.send:
+    - name: ${2:tag/name}
+    - data: 
+        ${3:dict data to send}
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet ev. "event.send"
+ev.s$1
+endsnippet
+
+
+######################
+# states.git 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.git.html
+######################
+
+snippet git.cl "git.cloned"
+git_${1:id_name}_cloned:
+  git.cloned:
+    - name: ${2:git address}
+    - target: ${3: target directory}
+    - branch: ${4: branch}
+    - identity: ${5:path to private key for ssh urls}
+    # HTTP Basic Auth username for HTTPS (only) clones
+    # - https_user: some-http-username
+    # HTTP Basic Auth password for HTTPS (only) clones
+    # https_pass: some-http-password
+    
+    # user under which to run git commands.. default is the same user as the
+    # salt-minion process
+    # - user: houdini
+    # Windows only. Required when specifying user. This parameter will be
+    # ignored on non-Windows platforms.
+    # - password: some-secure-password
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet git. "git.cloned"
+git.cl$1
+endsnippet
+
+snippet git.l "git.latest"
+# This only uses the bare-bones options from 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.git.html#salt.states.git.latest
+git_${1:id_name}_latest:
+  git.latest:
+    - name: ${2:git address}
+    - target: ${3:target directory}
+    - identity: ${4:path to private key for ssh git urls}
+    # name of local branch into which to checkout the specified rev. Salt will
+    # not care what branch is being used if not specified and will just use
+    # whatever branch is currently there.
+    `!p cim(t, snip, 5, 'branch')`- branch: ${5:branch}
+    # remote branch or tag or revision ID to checkout before update
+    # - rev: 
+    # HTTP Basic Auth username for HTTPS (only) clones
+    # - https_user: some-http-username
+    # HTTP Basic Auth password for HTTPS (only) clones
+    # https_pass: some-http-password
+    
+    # user under which to run git commands.. default is the same user as the
+    # salt-minion process
+    # - user: houdini
+    # Windows only. Required when specifying user. This parameter will be
+    # ignored on non-Windows platforms.
+    # - password: some-secure-password
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet git. "git.latest"
+git.l$1
+endsnippet
+
+snippet git.p "git.present"
+# Ensure that a repository exists in the given directory
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.git.html#salt.states.git.present
+# 
+# Note: This would be used to initialize a local git directory rather than
+# pulling from a remote location
+
+git_${1:id_name}_present:
+  git.present:
+    - name: ${2:path to directory}
+    # contents of an existing non-git directory indicated by name will be
+    # recursively removed and a new repository initialized in it's place
+    - force: ${3:true|false} 
+    # the repository will be a bare repository
+    - bare: ${4:true|false}
+    # user under which to run git commands.. default is the same user as the
+    # salt-minion process
+    # - user: houdini
+    # Windows only. Required when specifying user. This parameter will be
+    # ignored on non-Windows platforms.
+    # - password: some-secure-password
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet git. "git.present"
+git.p$1
+endsnippet
+
+
+######################
+# states.grains 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.grains.html
+######################
+
+##################
+#  Grain things  #
+##################
+
+snippet gr.g "salt['grains.get'](key, default)"
+salt['grains.get']('${2:key}'${3:, default})
+endsnippet
+
+post_jump "expand(snip)"
+snippet gr. "salt['grains.get'](key, default)"
+gr.g$1
+endsnippet
+
+snippet gr.fb "grains.filter_by"
+{% set ${1:varname} = salt['grains.filter_by'](${2:{
+'RedHat': { 'package': 'audit' },
+'Debian': { 'package': 'auditd' },
+}}) %}
+endsnippet
+
+post_jump "expand(snip)"
+snippet gr. "grains.filter_by"
+gr.fb$1
+endsnippet
+
+snippet gr.ab "grains.absent"
+# This state now support nested grains and complex values. It is also more
+# conservative: if a grain has a value that is a list or a dict, it will not be
+# removed unless the force parameter is True.
+
+grains_${1:id_name}_absent:
+  grains.absent:
+    - name: $1
+    # destructive removal completely deletes the grains. Otherwise it is simply
+    # set to None
+    `!p cim(t, snip, 2, 'true|false')`- force: ${2:true|false}
+endsnippet
+
+post_jump "expand(snip)"
+snippet gr. "grains.absent"
+gr.ab$1
+endsnippet
+
+snippet gr.ap "grains.append"
+grains_${1:id_name}_append:
+  grains.append:
+    - name: $1
+    - value: ${2:value to append}
+    # convert existing non-list grain to a list. An error is given if false and
+    # non-grain value is found
+    `!p cim(t, snip, 3, 'true|false')`- convert: ${3:true|false}
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet gr. "grains.append"
+gr.ap$1
+endsnippet
+
+snippet gr.ex "grains.exists"
+# Check for the existence of a grain
+# It will not be created if it does not exist
+grains_${1:id_name}_exists:
+  grains.exists:
+    - name: $1
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet gr. "grains.exists"
+gr.ex$1
+endsnippet
+
+snippet gr.la "grains.list_absent"
+# Ensure the absence of a value in a list grain
+grains_${1:id_name}_list_absent:
+  grains.list_absent:
+    - name: $1
+    - value: ${2:value to remove}
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet gr. "grains.list_absent"
+gr.la$1
+endsnippet
+
+snippet gr.lp "grains.list_present"
+# Ensure the presence of a value in a list grain
+grains_${1:id_name}_list_present:
+  grains.list_present:
+    - name: $1
+    - value: ${3:value to set in list}
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet gr. "grains.list_present"
+gr.lp$1
+endsnippet
+
+snippet gr.p "grains.present"
+# Ensure the presence of a grain
+grains_${1:id_name}_present:
+  grains.present:
+    - name: $1
+    - value: ${3:value to set}
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet gr. "grains.present"
+gr.p$1
+endsnippet
+
+######################
+# states.group 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.group.html
+######################
+
+snippet grp.ab "group.absent"
+# ensure group is absent
+group_${1:id_name}_absent:
+  group.absent:
+    - name: $1
+endsnippet
+
+post_jump "expand(snip)"
+snippet grp. "group.absent"
+grp.ab$1
+endsnippet
+
+snippet grp.p "group.present"
+# ensure group is present
+group_${1:id_name}_present:
+  group.present:
+    - name: $1
+endsnippet
+
+post_jump "expand(snip)"
+snippet grp. "group.present"
+grp.p$1
+endsnippet
+
+
+######################
+# states.http 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.http.html
+######################
+
+snippet http.q "http.absent"
+# ensure http query works with proper status, etc
+http_${1:id_name}_query:
+  http.query:
+    - name: ${2:query address}
+    # status code to look for. Can be used in place of match
+    - status: ${3:200}
+    # - match: ${4:pattern to look for in the return text}
+    # default match_type is string
+    # - match_type: string|pcre
+endsnippet
+
+post_jump "expand(snip)"
+snippet http. "http.query"
+http.q$1
+endsnippet
+
+snippet http.wq "http.wait_for_successful_query"
+# Like query (same options) but will repeat for a total time at intervals given
+http_${1:id_name}_wait_for_successfull_query:
+  http.wait_for_successful_query:
+    - name: ${2:query address}
+    # default wait_for is 300 seconds
+    # - wait_for: ${3:300}
+    # how often to try the request
+    - request_interval: ${4:5}
+    - status: ${5:200}
+    # - match: ${6:string to look for in the return text}
+    # default match_type is string
+    # - match_type: string|pcre
+
+endsnippet
+
+post_jump "expand(snip)"
+snippet http. "http.wait_for_successful_query"
+http.wq$1
+endsnippet
+
+######################
+# states.module 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.module.html
+######################
+
+snippet mod.r "module.run"
+# allow individual execution module calls to be made
+module_${1:id_name}_run:
+  module.run:
+    - name: $1
+    - ${2:all other options}
+endsnippet
+
+post_jump "expand(snip)"
+snippet mod. "module.run"
+mod.r$1
+endsnippet
+
+######################
+# states.pkg 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.pkg.html
+######################
+
+snippet pkg.i "pkg.installed"
+pkg_${1:id_name}_installed:
+  pkg.installed:
+    - name: $1
+    # name is ignored if pkgs is given. pkgs is a list of pkgs to install
+    # versions can be specified with this syntax as well by adding a colon
+    # after the pkg name and the version
+    # names is like pkgs but you cannot specify a version with names like with
+    # pkgs
+    # names:
+    #   - pkg_name
+    # - pkgs: 
+    #   - ${2:pkgs}${3::version}
+    ## sources can be a list of sources (typically rpms) to download and
+    ## install
+    # - sources:
+    #   - salt://path/to/pkg.rpm 
+    # - version: ${4:version}
+    # Refresh the repo db prior to installation, defaults to false
+    `!p cim(t, snip, 5, 'true|false')`- refresh: ${5:true|false}
+endsnippet
+
+post_jump "expand(snip)"
+snippet pkg. "pkg.installed"
+pkg.i$1
+endsnippet
+
+snippet pkg.p "pkg.purged"
+pkg_${1:id_name}_purged:
+  pkg.purged:
+    - name: $1
+    ##  version that should be removed. Do not remove a non-matching version
+    # version: some-version
+    # pkgs:
+    #   - list
+    #   - of pkgs
+endsnippet
+
+post_jump "expand(snip)"
+snippet pkg. "pkg.purged"
+pkg.p$1
+endsnippet
+
+snippet pkg.r "pkg.removed"
+pkg_${1:id_name}_removed:
+  pkg.removed:
+    - name: $1
+    ##  version that should be removed. Do not remove a non-matching version
+    # version: some-version
+    # pkgs:
+    #   - list
+    #   - of pkgs
+endsnippet
+
+post_jump "expand(snip)"
+snippet pkg. "pkg.removed"
+pkg.r$1
+endsnippet
+
+snippet pkg.u "pkg.uptodate"
+pkg_${1:id_name}_uptodate:
+  pkg.uptodate:
+    - name: ${2:reference}
+    ##  version that should be removed. Do not remove a non-matching version
+    # version: some-version
+    # pkgs:
+    #   - list
+    #   - of pkgs
+endsnippet
+
+post_jump "expand(snip)"
+snippet pkg. "pkg.uptodate"
+pkg.u$1
+endsnippet
+
+######################
+# states.pip 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.pip_state.html
+######################
+
+snippet pip. "prep for pip"
+# TODO update this because python-pip works for debian but RedHat variants take
+# python2-pip
+install-python-pip:
+  pkg.installed
+    - name: python-pip
+endsnippet
+
+snippet pip.i "pip.installed"
+pip_${1:id_name}_installed:
+  pip.installed:
+    - name: $1
+    # - requires: salt://path/to/requirements.txt
+    # - user: user_to_run_as
+endsnippet
+
+post_jump "expand(snip)"
+snippet pip. "pip.installed"
+pip.i$1
+endsnippet
+
+
+snippet pip.r "pip.removed"
+pip_${1:id_name}_removed:
+  pip.removed:
+    - name: $1
+endsnippet
+
+post_jump "expand(snip)"
+snippet pip. "pip.removed"
+pip.r$1
+endsnippet
+
+######################
+# states.service 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.service.html
+######################
+
+# service.running
+snippet svc.r "service.running"
+service_${1:id_name}_running:
+  service.running:
+    - name: $1
+    # Set the service to be enabled on boot
+    # - enable: true|false
+    `!p cim(t, snip, 2, 'true|false')`- enable: ${2:true|false}
+endsnippet
+
+post_jump "expand(snip)"
+snippet svc. "service.running"
+svc.r$1
+endsnippet
+
+# service.enabled
+snippet svc.e "service.enabled"
+service_${1:id_name}_enabled:
+  service.enabled:
+    - name: $1
+endsnippet
+
+post_jump "expand(snip)"
+snippet svc. "service.enabled"
+svc.e$1
+endsnippet
+
+# service.dead
+snippet svc.d "service.dead"
+service_${1:id_name}_dead:
+  service.dead:
+    - name: $1
+    # set this service to be enabled at boot even though it is set as dead
+    # right now
+    `!p cim(t, snip, 2, 'true|false')`- enabled: ${2:true|false}
+endsnippet
+
+post_jump "expand(snip)"
+snippet svc. "service.dead"
+svc.d$1
+endsnippet
+
+# service.disabled
+snippet svc.di "service.disabled"
+service_${1:id_name}_disabled:
+  service.disabled:
+    - name: $1
+endsnippet
+
+post_jump "expand(snip)"
+snippet svc. "service.disabled"
+svc.di$1
+endsnippet
+
+######################
+# states.user 
+# https://docs.saltstack.com/en/latest/ref/states/all/salt.states.user.html
+######################
+
+# user.absent
+snippet u.a "user.absent"
+user_${1:id_name}_absent:
+  user.absent:
+    - name: $1
+    # set purge to true to deleta all of the user's files as well
+    `!p cim(t, snip, 2, 'true|false')`- purge: ${2:true|false}
+    # set force to remove the user even if the user is currently logged int
+    `!p cim(t, snip, 3, 'true|false')`- force: ${3:true|false}
+endsnippet
+
+post_jump "expand(snip)"
+snippet u. "user.absent"
+u.a$1
+endsnippet
+
+# user.present
+snippet u.p "user.present"
+user_${1:id_name}_present:
+  user.present:
+    - name: $1
+    #- groups:
+    #  - list
+    #  - of groups that must already exist
+    #- optional_groups:
+    #  - list
+    #  - of groups that could not exist, will still pass
+    ## A password hash to set for the user. This field is only supported on Linux, FreeBSD, NetBSD, OpenBSD, and Solaris. If the empty_password argument is set to True then password is ignored. For Windows this is the plain text password. For Linux, the hash can be generated with openssl passwd -1.
+    #- password: password
+    ## Set to True to hash the clear text password. Default is False.
+    `!p cim(t, snip, 2, 'true|false')`- hash_password: ${2:true|false}
+    ## Set to False to keep the password from being changed if it has already been set and the password hash differs from what is specified in the "password" field. This option will be ignored if "password" is not specified, Default is True.
+    `!p cim(t, snip, 3, 'true|false')`- enforce_password: ${3:true|false}
+    ### Shadow passwords
+    ### Shadow attributes support (currently Linux only):
+    # The below values should be specified as integers.
+    ## Date of last change of password, represented in days since epoch (January 1, 1970).
+    #- date: days-since-epoch
+    ## The minimum number of days between password changes.
+    #- mindays: days
+    ## The maximum number of days between password changes.
+    #- maxdays: max-days
+    ## The number of days after a password expires before an account is locked.
+    #- inactdays: days
+    ## Number of days prior to maxdays to warn users.
+    #- warndays: warning-days
+    ## Date that account expires, represented in days since epoch (January 1, 1970).
+    #- expire: days
+endsnippet
+
+post_jump "expand(snip)"
+snippet u. "user.present"
+u.p$1
+endsnippet
+
+######################
+# 
+# Orchestration states
+# https://docs.saltstack.com/en/latest/topics/orchestrate/index.html
+# 
+######################
+
+# Executing orchestration states
+# salt-run state.orchestrate orch.webserver
+
+snippet orc.f "call some function in an orchestration state"
+orch_${1:modname.funcname}_run_function:
+  salt.function:
+    - name: $1
+    - tgt: ${2:some-minion-match}
+    - arg:
+      - ${3:arg1}
+      - ${3:arg2}
+    - kwarg:
+        ${4:kwarg1}: ${5:val1}
+endsnippet
+
+snippet orc.s "call one or more states as part of an orchestration"
+orch_${1:state.name}_run_state:
+  salt.state:
+    - tgt: ${2:some-minion-match}
+    - sls:
+      - $1
+      ${3:- other_states}
+    - kwarg:
+        ${4:kwarg1}: ${5:val1}
+endsnippet
+
+snippet orc.h "call highstate as part of an orchestration"
+orch_${1:state.name}_run_highstate:
+  salt.state:
+    - tgt: ${2:some-minion-match}
+    - highstate: True
+    - kwarg:
+        ${3:kwarg1}: ${4:val1}
+endsnippet
+
+snippet orc.r "call runner as part of an orchestration"
+orch_${1:(e.g) cloud.profile}_run_runner:
+  salt.runner:
+    - name: $1
+    ${2:- kwarg1}: ${3:val1}
+endsnippet
+
+snippet orc.wfe "orchestration state that will wait for an event to appear on the bus"
+orch_${1:event/tag/name}_wait_for_event:
+  salt.wait_for_event:
+    - name: $1
+    # when all these minions have returned with the
+    # given tag return success
+    #- id_list:
+    #  - ${2:minion_id}
+    #  - ${3:list of minions to watch}
+    `!p cim(t, snip, 4, 300)`- timeout: ${4:300}
+endsnippet
+
+snippet orc.samp "complete sample orchestration state"
+
+##########################
+#  Sample Orchestration  #
+##########################
+
+bootstrap_servers:
+  salt.function:
+    - name: cmd.run
+    - tgt: 10.0.0.0/24
+    - tgt_type: ipcidr
+    - arg:
+      - bootstrap
+
+storage_setup:
+  salt.state:
+    - tgt: 'role:storage'
+    - tgt_type: grain
+    - sls: ceph
+    - require:
+      - salt: webserver_setup
+
+webserver_setup:
+  salt.state:
+    - tgt: 'web*'
+    - highstate: True
+
+{# 
+Given the above setup, the orchestration will be carried out as follows:
+
+1. The shell command bootstrap will be executed on all minions in the 10.0.0.0/24 subnet.
+2. A Highstate will be run on all minions whose ID starts with "web", since the
+   storage_setup state requires it.
+3. Finally, the ceph SLS target will be executed on all minions which have a
+   grain called role with a value of storage.
+#}
+
+endsnippet
+
+
+######################
+# 
+# Reactor.conf
+# https://docs.saltstack.com/en/latest/topics/event/index.html
+# 
+######################
+
+######################
+# 
+# Reactor states
+# 
+######################
+
+######################
+# 
+# Pillar Top Files
+# 
+######################
+
+snippet p.t "pillar top file base"
+# First line defines the environment
+# best practice would say to leave this as `base`
+${1:base}:
+  '$1':
+    - ${2:list of pillar states}
+endsnippet
+
+######################
+# 
+# File roots Top Files
+# 
+######################
+
+######################
+# 
+# SSH roster files
+# 
+######################
+
+######################
+# 
+# Salt Cloud maps
+# Salt Cloud profiles
+# Salt Cloud providers
+# 
+######################

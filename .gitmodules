@@ -1,0 +1,33 @@
+[submodule "bundles/Vim-Jinja2-Syntax"]
+	path = bundles/Vim-Jinja2-Syntax
+	url = https://github.com/Glench/Vim-Jinja2-Syntax.git
+[submodule "bundles/fzf.vim"]
+	path = bundles/fzf.vim
+	url = https://github.com/junegunn/fzf.vim.git
+[submodule "bundles/lightline.vim"]
+	path = bundles/lightline.vim
+	url = https://github.com/itchyny/lightline.vim.git
+[submodule "bundles/nerdtree"]
+	path = bundles/nerdtree
+	url = https://github.com/scrooloose/nerdtree.git
+[submodule "bundles/salt-vim"]
+	path = bundles/salt-vim
+	url = https://github.com/saltstack/salt-vim.git
+[submodule "bundles/ultisnips"]
+	path = bundles/ultisnips
+	url = https://github.com/SirVer/ultisnips.git
+[submodule "bundles/vim-colors-solarized"]
+	path = bundles/vim-colors-solarized
+	url = https://github.com/altercation/vim-colors-solarized.git
+[submodule "bundles/vim-commentary"]
+	path = bundles/vim-commentary
+	url = git://github.com/tpope/vim-commentary.git
+[submodule "bundles/vim-flake8"]
+	path = bundles/vim-flake8
+	url = https://github.com/nvie/vim-flake8.git
+[submodule "bundles/vim-javascript"]
+	path = bundles/vim-javascript
+	url = https://github.com/pangloss/vim-javascript.git
+[submodule "bundles/vim-yaml"]
+	path = bundles/vim-yaml
+	url = https://github.com/stephpy/vim-yaml.git

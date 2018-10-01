@@ -1,0 +1,153 @@
+##############
+# NICE BOXES #
+##############
+global !p
+from vimsnippets import foldmarker, make_box, get_comment_format
+from vimsnippets import get_lorem
+from search_list import expand
+from faker import Faker
+
+faker = Faker()
+
+def varDeps(args):
+    result = ""
+    argList = args.split(",")
+
+    for arg in argList:
+        dep = arg.strip() + "\n"
+        result = result + dep
+
+    return result.rstrip()
+
+endglobal
+
+snippet v.ml "Vim modeline"
+`!p snip.rv=get_comment_format()[0]` vim`!v ':set '. (&expandtab ? printf('et sw=%i ts=%i', &sw, &ts) : printf('noet sts=%i sw=%i ts=%i', &sts, &sw, &ts)) . (&tw ? ' tw='. &tw : '') . ':'`
+endsnippet
+
+post_jump "expand(snip)"
+snippet v. "vim modeline"
+v.ml$1
+endsnippet
+
+snippet v.box "A nice box with the current comment symbol" b
+`!p
+box = make_box(len(t[1]))
+snip.rv = box[0]
+snip += box[1]
+`${1:${VISUAL:content}}`!p
+box = make_box(len(t[1]))
+snip.rv = box[2]
+snip += box[3]`
+$0
+endsnippet
+
+post_jump "expand(snip)"
+snippet v. "box with current comment symbol"
+v.box$1
+endsnippet
+
+snippet v.bbox "A nice box over the full width" b
+`!p
+if not snip.c:
+	width = int(vim.eval("&textwidth - (virtcol('.') == 1 ? 0 : virtcol('.'))")) or 71
+box = make_box(len(t[1]), width)
+snip.rv = box[0]
+snip += box[1]
+`${1:${VISUAL:content}}`!p
+box = make_box(len(t[1]), width)
+snip.rv = box[2]
+snip += box[3]`
+$0
+endsnippet
+
+post_jump "expand(snip)"
+snippet v. "box with current comment symbol over full width"
+v.bbox$1
+endsnippet
+
+#########
+# DATES #
+#########
+snippet date "YYYY-MM-DD" w
+`!v strftime("%Y-%m-%d")`
+endsnippet
+
+snippet ddate "Month DD, YYYY" w
+`!v strftime("%b %d, %Y")`
+endsnippet
+
+snippet diso "ISO format datetime" w
+`!v strftime("%Y-%m-%d %H:%M:%S%z")`
+endsnippet
+
+snippet time "hh:mm" w
+`!v strftime("%H:%M")`
+endsnippet
+
+snippet datetime "YYYY-MM-DD hh:mm" w
+`!v strftime("%Y-%m-%d %H:%M")`
+endsnippet
+
+snippet todo "TODO comment" bw
+`!p snip.rv=get_comment_format()[0]` ${2:TODO}: $0${3: <${4:`!v strftime('%d %b %Y')`}${5:, `!v g:snips_author`}>} `!p snip.rv=get_comment_format()[2]`
+endsnippet
+
+
+###########################
+#  Misc Random Utilities  #
+###########################
+
+# Get a random UUID
+snippet r.uuid "Random UUID" w
+`!p if not snip.c: snip.rv = faker.uuid4()`
+endsnippet
+
+# generate a random email address
+snippet r.em "Random email address" w
+`!p if not snip.c: snip.rv=faker.email()`
+endsnippet
+
+snippet r.profile "Random Profile" w
+`!p if not snip.c: snip.rv=faker.simple_profile()`
+endsnippet
+
+# https://stackoverflow.com/questions/28972221/ultisnips-create-argument-list-with-placeholders
+snippet tvd "try vardeps"
+function($scope, ${3:deps}) {
+    `!p snip.rv = varDeps(t[3])`
+}
+endsnippet
+
+# generate lorem ipsum
+# needs pip install lorem
+snippet r.l "1 Lorem Ipsum Paragraphs" b
+`!p get_lorem(snip, paragraphs=1)`
+endsnippet
+
+snippet r.l "2 Lorem Ipsum Paragraphs" b
+`!p get_lorem(snip, paragraphs=2)`
+endsnippet
+
+snippet r.l "3 Lorem Ipsum Paragraphs" b
+`!p get_lorem(snip, paragraphs=3)`
+endsnippet
+
+snippet r.l "5 Lorem Ipsum Paragraphs" b
+`!p get_lorem(snip, paragraphs=5)`
+endsnippet
+
+snippet r.l "8 Lorem Ipsum Paragraphs" b
+`!p get_lorem(snip, paragraphs=8)`
+endsnippet
+
+# audio|image|office|text|video
+snippet r.f.t "Random File path for text file" b
+`!p get_file_path(snip, category='text')`
+endsnippet
+
+snippet r.f.i "Random File path for image" b
+`!p get_file_path(snip, category='image')`
+endsnippet
+
+
