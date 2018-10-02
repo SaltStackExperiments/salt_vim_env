@@ -13,6 +13,7 @@ This repo contains the VIM environment that I would like to have on every SALT m
 
 * Checkout this repo to somewhere on the system
 * Symlink the `~/.vim` folder to this checkout repository
+* Run `~/.vim/deb-setup.sh` or `~/.vim/rpm-setup.sh`
 * That's it.
 
 On vagrant machines I can simply sync a local folder to ~/.vim in the VM.
@@ -22,6 +23,8 @@ I keep thinking that I would like this to be part of a salt state. This could be
 
 ## Requirements
 
+* uninstall purge packaged vim because it doesn't come with python support
+* install vim.nox because it comes with vim support
 * pip
 * pip install faker
 * pip install lorem
