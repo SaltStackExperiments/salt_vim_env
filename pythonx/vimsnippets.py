@@ -1,6 +1,17 @@
 import vim
-from faker import Faker
-import lorem
+faker_imported = False
+lorem_imported = False
+try:
+    from faker import Faker
+    faker_imported = True
+except Exception:
+    pass
+
+try:
+    import lorem
+    lorem_imported = True
+except Exception:
+    pass
 
 
 def _parse_comments(s):
@@ -83,6 +94,7 @@ def get_lorem(snip, paragraphs=1, join_with='\n\n'):
         snip.rv = join_with.join([lorem.paragraph().strip() for x in range(paragraphs)]+['\n'])
     else:
         snip.rv = snip.c
+
 
 def get_file_path(snip, category=None, depth=2):
     if not snip.c:

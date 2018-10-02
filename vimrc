@@ -110,17 +110,6 @@ let g:lightline = {
       \ },
       \ }
 
-let vim_markdown_preview_github=0
-let vim_markdown_preview_temp_file=1
-
-let g:pencil#wrapModeDefault = 'soft'
-
-augroup pencil
-  autocmd!
-  autocmd FileType markdown,mkd,md,text call pencil#init({'wrap': 'soft'})
-  " autocmd FileType text         call pencil#init({'wrap': 'soft'})
-augroup END
-
 " python with virtualenv support
 py << EOF
 import os
