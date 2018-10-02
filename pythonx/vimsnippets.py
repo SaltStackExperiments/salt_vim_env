@@ -1,4 +1,5 @@
 import vim
+import string
 faker_imported = False
 lorem_imported = False
 try:

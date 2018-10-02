@@ -115,6 +115,7 @@ if has("python3")
 else
     command! -nargs=1 Py py <args>
 endif
+
 " python with virtualenv support
 
 Py << EOF
@@ -134,17 +135,15 @@ autocmd BufWritePost *.py call Flake8()
 "
 " delete temporary files
 let vim_markdown_preview_temp_file=1
-" Use chrome for rendering - Safari doesn't seem to work
-let vim_markdown_preview_browser='Google Chrome'
-
 
 " fzf stuff
 " If installed using Homebrew
-set rtp+=/usr/local/bin/fzf
+" set rtp+=/usr/local/bin/fzf
+set rtp+=/root/.fzf/bin/fzf
 
 
-" value(s) needed by UltiSnips
-let g:snips_author = "Kevin Hansen"
+" value(s) maybe needed by UltiSnips
+
 if has('python')
     let g:UltiSnipsUsePythonVersion = 2
 else
