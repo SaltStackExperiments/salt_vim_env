@@ -110,8 +110,14 @@ let g:lightline = {
       \ },
       \ }
 
+if has("python3")
+    command! -nargs=1 Py py3 <args>
+else
+    command! -nargs=1 Py py <args>
+endif
 " python with virtualenv support
-py << EOF
+
+Py << EOF
 import os
 import sys
 if 'VIRTUAL_ENV' in os.environ:
@@ -139,3 +145,8 @@ set rtp+=/usr/local/bin/fzf
 
 " value(s) needed by UltiSnips
 let g:snips_author = "Kevin Hansen"
+if has('python')
+    let g:UltiSnipsUsePythonVersion = 2
+else
+    let g:UltiSnipsUsePythonVersion = 3
+endif

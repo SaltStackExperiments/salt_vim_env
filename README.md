@@ -1,7 +1,7 @@
 # Salt VIM Environment #
 
-This repo contains the VIM environment that I would like to have on every SALT master I work on. It includes:
 
+This repo contains the VIM environment that I would like to have on every SALT master I work on. It includes:
 * .vimrc file
 * pathogen plugin support
 * bundles installed
@@ -18,7 +18,7 @@ This repo contains the VIM environment that I would like to have on every SALT m
 
 On vagrant machines I can simply sync a local folder to ~/.vim in the VM.
 
-I keep thinking that I would like this to be part of a salt state. This could be done easily with gitfs, then a `salt-call state.sls my-vim`. The thing about gitfs is that it requires GitPython or pygit2 to be installed. This isn't difficult but adds a step. I suppose that in most cases I would want gitfs or GitPython on a salt-master that I manage.
+I keep thinking that I would like this to be part of a salt state. This could be done easily with gitfs, then a `salt-call state.sls my-vim`. The thing about gitfs is that it requires GitPython or pygit2 to be installed. This isn't difficult but adds a step-though I suppose that in most cases I would want gitfs or GitPython on a salt-master that I manage.
 
 
 ## Requirements
@@ -52,6 +52,7 @@ sudo rm /usr/bin/vim
 sudo apt-get install vim.nox
 ```
 
+# Install faker and lorem libs
 Must install faker and lorem python library
 
 ```
@@ -59,6 +60,7 @@ apt-get install python3-pip
 pip3 install faker lorem
 ```
 
+# Install Fzf
 Must install fzf for fuzzy searching to work.
 
 ```
